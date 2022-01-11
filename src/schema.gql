@@ -2,26 +2,37 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AuthInput {
+  password: String!
+  username: String!
+}
+
 type AuthResponse {
-  access_token: String!
+  accessToken: String!
+  refreshToken: String!
   user: User!
 }
 
 type Mutation {
-  login(loginUserInput: UserAuthInput!): AuthResponse!
-  signup(signupUserInput: UserAuthInput!): AuthResponse!
+  login(loginUserInput: AuthInput!): AuthResponse!
+  refreshAuth(refreshAuthInput: RefreshInput!): RefreshResponse!
+  signup(signupUserInput: AuthInput!): AuthResponse!
 }
 
 type Query {
   me: User
 }
 
-type User {
-  id: Int!
-  username: String!
+input RefreshInput {
+  refreshToken: String!
 }
 
-input UserAuthInput {
-  password: String!
+type RefreshResponse {
+  accessToken: String!
+  user: User!
+}
+
+type User {
+  id: Int!
   username: String!
 }

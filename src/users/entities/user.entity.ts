@@ -15,3 +15,5 @@ export class User {
   @Column()
   password: string;
 }
+
+// export type BaseUser = Omit<User, 'password'>;

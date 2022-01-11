@@ -9,17 +9,17 @@ export class UsersService {
     @InjectRepository(User) private usersRepository: Repository<User>,
   ) {}
 
+  async findById(id: number) {
+    return this.usersRepository.findOne(id);
+  }
+
+  async findByUsername(username: string) {
+    return this.usersRepository.findOne({ where: { username } });
+  }
+
   async create(createUserInput: { username: string; password: string }) {
     const newUser = this.usersRepository.create(createUserInput);
 
     return this.usersRepository.save(newUser);
-  }
-
-  async findAll() {
-    return this.usersRepository.find();
-  }
-
-  async findOne(username: string) {
-    return this.usersRepository.findOne({ where: { username } });
   }
 }

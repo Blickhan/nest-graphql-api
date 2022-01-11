@@ -1,41 +1,32 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { User } from 'src/users/entities/user.entity';
 import { UsersService } from 'src/users/users.service';
-import { UserAuthInput } from './dto/user-auth.input';
+import { AuthInput } from './dto/auth.input';
 import { hash, compare } from 'bcrypt';
-
-type BaseUser = Omit<User, 'password'>;
+import { TokensService } from './tokens.service';
+import { RefreshInput } from './dto/refresh.input';
+import { AuthResponse } from './dto/auth.response';
+import { RefreshResponse } from './dto/refresh.response';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private jwtService: JwtService,
+    private tokensService: TokensService,
   ) {}
 
   async validateCredentials(
     username: string,
     password: string,
-  ): Promise<BaseUser | null> {
-    const user = await this.usersService.findOne(username);
+  ): Promise<User | null> {
+    const user = await this.usersService.findByUsername(username);
 
     const valid = user ? await compare(password, user.password) : false;
 
-    if (!valid) return null;
-
-    return {
-      id: user.id,
-      username: user.username,
-    };
+    return valid ? user : null;
   }
 
-  private generateToken(user: BaseUser) {
-    const payload = { username: user.username, sub: user.id };
-    return this.jwtService.sign(payload);
-  }
-
-  async login(loginUserInput: UserAuthInput) {
+  async login(loginUserInput: AuthInput) {
     const { username, password } = loginUserInput;
 
     const user = await this.validateCredentials(username, password);
@@ -43,16 +34,13 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    return {
-      access_token: this.generateToken(user),
-      user,
-    };
+    return this.generateAuthResponse(user);
   }
 
-  async signup(signupUserInput: UserAuthInput) {
+  async signup(signupUserInput: AuthInput) {
     const { username, password } = signupUserInput;
 
-    const existingUser = await this.usersService.findOne(username);
+    const existingUser = await this.usersService.findByUsername(username);
     if (existingUser) {
       throw new Error('User already exists');
     }
@@ -64,9 +52,32 @@ export class AuthService {
       password: hashedPassword,
     });
 
+    return this.generateAuthResponse(newUser);
+  }
+
+  private async generateAuthResponse(user: User): Promise<AuthResponse> {
+    const accessToken = await this.tokensService.generateAccessToken(user);
+    const refreshToken = await this.tokensService.generateRefreshToken(
+      user,
+      60 * 60 * 24 * 30,
+    );
+
     return {
-      access_token: this.generateToken(newUser),
-      user: newUser,
+      accessToken,
+      refreshToken,
+      user,
+    };
+  }
+
+  async refreshAuth(refreshAuthInput: RefreshInput): Promise<RefreshResponse> {
+    const { user, token } =
+      await this.tokensService.createAccessTokenFromRefreshToken(
+        refreshAuthInput.refreshToken,
+      );
+
+    return {
+      accessToken: token,
+      user,
     };
   }
 }
