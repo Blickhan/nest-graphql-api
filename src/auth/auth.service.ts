@@ -4,7 +4,6 @@ import { UsersService } from 'src/users/users.service';
 import { AuthInput } from './dto/auth.input';
 import { hash, compare } from 'bcrypt';
 import { TokensService } from './tokens.service';
-import { RefreshInput } from './dto/refresh.input';
 import { AuthResponse } from './dto/auth.response';
 import { RefreshResponse } from './dto/refresh.response';
 
@@ -15,17 +14,6 @@ export class AuthService {
     private tokensService: TokensService,
   ) {}
 
-  async validateCredentials(
-    username: string,
-    password: string,
-  ): Promise<User | null> {
-    const user = await this.usersService.findByUsername(username);
-
-    const valid = user ? await compare(password, user.password) : false;
-
-    return valid ? user : null;
-  }
-
   async login(loginUserInput: AuthInput) {
     const { username, password } = loginUserInput;
 
@@ -35,6 +23,17 @@ export class AuthService {
     }
 
     return this.generateAuthResponse(user);
+  }
+
+  private async validateCredentials(
+    username: string,
+    password: string,
+  ): Promise<User | null> {
+    const user = await this.usersService.findByUsername(username);
+
+    const valid = user ? await compare(password, user.password) : false;
+
+    return valid ? user : null;
   }
 
   async signup(signupUserInput: AuthInput) {
@@ -69,15 +68,22 @@ export class AuthService {
     };
   }
 
-  async refreshAuth(refreshAuthInput: RefreshInput): Promise<RefreshResponse> {
+  async refreshAuth(refreshToken: string): Promise<RefreshResponse> {
     const { user, token } =
-      await this.tokensService.createAccessTokenFromRefreshToken(
-        refreshAuthInput.refreshToken,
-      );
+      await this.tokensService.createAccessTokenFromRefreshToken(refreshToken);
 
     return {
       accessToken: token,
       user,
     };
+  }
+
+  async logout(refreshToken: string): Promise<boolean> {
+    try {
+      await this.tokensService.revokeRefreshToken(refreshToken);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }

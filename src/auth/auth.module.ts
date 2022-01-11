@@ -7,7 +7,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { RefreshToken } from './entities/refresh-tokens.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RefreshTokensService } from './refresh-tokens.service';
 import { TokensService } from './tokens.service';
 
 @Module({
@@ -17,17 +16,11 @@ import { TokensService } from './tokens.service';
     UsersModule,
     JwtModule.registerAsync({
       useFactory: () => ({
-        signOptions: { expiresIn: '60s' },
+        signOptions: { expiresIn: '2h' },
         secret: process.env.JWT_SECRET,
       }),
     }),
   ],
-  providers: [
-    AuthService,
-    AuthResolver,
-    JwtStrategy,
-    RefreshTokensService,
-    TokensService,
-  ],
+  providers: [AuthService, AuthResolver, JwtStrategy, TokensService],
 })
 export class AuthModule {}

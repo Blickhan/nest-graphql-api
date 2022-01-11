@@ -11,6 +11,6 @@ export class UsersResolver {
   @Query(() => User, { nullable: true })
   @UseGuards(JwtGuard)
   me(@Context() context) {
-    return this.usersService.findById(context.userId);
+    return this.usersService.findById(context.req.user?.userId);
   }
 }

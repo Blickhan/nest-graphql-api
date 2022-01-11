@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
 import { SignOptions, TokenExpiredError } from 'jsonwebtoken';
 import { User } from 'src/users/entities/user.entity';
 import { UsersService } from 'src/users/users.service';
+import { Repository } from 'typeorm';
 import { RefreshToken } from './entities/refresh-tokens.entity';
-import { RefreshTokensService } from './refresh-tokens.service';
 
 // TODO: Use my app's url
 const BASE_OPTIONS: SignOptions = {
@@ -20,7 +21,8 @@ export interface RefreshTokenPayload {
 @Injectable()
 export class TokensService {
   constructor(
-    private refreshTokensService: RefreshTokensService,
+    @InjectRepository(RefreshToken)
+    private refreshTokensRepository: Repository<RefreshToken>,
     private jwtService: JwtService,
     private usersService: UsersService,
   ) {}
@@ -35,15 +37,11 @@ export class TokensService {
   }
 
   async generateRefreshToken(user: User, expiresIn: number): Promise<string> {
-    const refreshToken = await this.refreshTokensService.create(
-      user,
-      expiresIn,
-    );
+    const refreshToken = await this.createRefreshToken(user, expiresIn);
 
     const opts: SignOptions = {
       ...BASE_OPTIONS,
       expiresIn,
-      subject: String(user.id),
       jwtid: String(refreshToken.id),
     };
 
@@ -54,10 +52,19 @@ export class TokensService {
    * Decodes and validates refresh token
    */
   async resolveRefreshToken(
-    encoded: string,
+    encodedRefreshToken: string,
   ): Promise<{ user: User; refreshToken: RefreshToken }> {
-    const payload = await this.decodeRefreshToken(encoded);
-    const refreshToken = await this.getRefreshTokenFromPayload(payload);
+    const { jti: refreshTokenId } = await this.decodeRefreshToken(
+      encodedRefreshToken,
+    );
+
+    if (!refreshTokenId) {
+      throw new Error('Refresh token malformed');
+    }
+
+    const refreshToken = await this.refreshTokensRepository.findOne({
+      where: { id: refreshTokenId },
+    });
 
     if (!refreshToken) {
       throw new Error('Refresh token not found');
@@ -67,11 +74,7 @@ export class TokensService {
       throw new Error('Refresh token revoked');
     }
 
-    const user = await this.getUserFromPayload(payload);
-
-    if (!user) {
-      throw new Error('Refresh token malformed');
-    }
+    const user = await this.usersService.findById(refreshToken.userId);
 
     return { user, refreshToken };
   }
@@ -100,27 +103,36 @@ export class TokensService {
     }
   }
 
-  private async getUserFromPayload(
-    payload: RefreshTokenPayload,
-  ): Promise<User> {
-    const subId = payload.sub;
+  /**
+   *
+   * @param user The user the refresh token is for
+   * @param ttl The amount of time in seconds until expiration (time-to-live)
+   * @returns
+   */
+  private async createRefreshToken(
+    user: User,
+    ttl: number,
+  ): Promise<RefreshToken> {
+    const token = new RefreshToken();
 
-    if (!subId) {
-      throw new Error('Refresh token malformed');
-    }
+    token.userId = user.id;
+    token.isRevoked = false;
 
-    return this.usersService.findById(subId);
+    const expiration = new Date();
+    expiration.setTime(expiration.getTime() + ttl);
+
+    token.expires = expiration;
+
+    return this.refreshTokensRepository.save(token);
   }
 
-  private async getRefreshTokenFromPayload(
-    payload: RefreshTokenPayload,
-  ): Promise<RefreshToken | null> {
-    const tokenId = payload.jti;
+  async revokeRefreshToken(encodedRefreshToken: string) {
+    const { refreshToken } = await this.resolveRefreshToken(
+      encodedRefreshToken,
+    );
 
-    if (!tokenId) {
-      throw new Error('Refresh token malformed');
-    }
+    refreshToken.isRevoked = true;
 
-    return this.refreshTokensService.findById(tokenId);
+    return this.refreshTokensRepository.save(refreshToken);
   }
 }

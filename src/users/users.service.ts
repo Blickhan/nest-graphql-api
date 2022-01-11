@@ -10,7 +10,7 @@ export class UsersService {
   ) {}
 
   async findById(id: number) {
-    return this.usersRepository.findOne(id);
+    return this.usersRepository.findOne({ where: { id } });
   }
 
   async findByUsername(username: string) {

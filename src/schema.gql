@@ -15,16 +15,13 @@ type AuthResponse {
 
 type Mutation {
   login(loginUserInput: AuthInput!): AuthResponse!
-  refreshAuth(refreshAuthInput: RefreshInput!): RefreshResponse!
+  logout(refreshToken: String!): Boolean!
+  refreshAuth(refreshToken: String!): RefreshResponse!
   signup(signupUserInput: AuthInput!): AuthResponse!
 }
 
 type Query {
   me: User
-}
-
-input RefreshInput {
-  refreshToken: String!
 }
 
 type RefreshResponse {

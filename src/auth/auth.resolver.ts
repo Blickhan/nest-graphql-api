@@ -1,7 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
 import { AuthResponse } from './dto/auth.response';
-import { RefreshInput } from './dto/refresh.input';
 import { AuthInput } from './dto/auth.input';
 import { RefreshResponse } from './dto/refresh.response';
 
@@ -20,7 +19,12 @@ export class AuthResolver {
   }
 
   @Mutation(() => RefreshResponse)
-  refreshAuth(@Args('refreshAuthInput') refreshAuthInput: RefreshInput) {
-    return this.authService.refreshAuth(refreshAuthInput);
+  refreshAuth(@Args('refreshToken') refreshToken: string) {
+    return this.authService.refreshAuth(refreshToken);
+  }
+
+  @Mutation(() => Boolean)
+  logout(@Args('refreshToken') refreshToken: string) {
+    return this.authService.logout(refreshToken);
   }
 }
