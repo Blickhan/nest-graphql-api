@@ -8,11 +8,11 @@ import { RefreshToken } from './entities/refresh-tokens.entity';
 export class RefreshTokensService {
   constructor(
     @InjectRepository(RefreshToken)
-    private refreshTokenRepository: Repository<RefreshToken>,
+    private refreshTokensRepository: Repository<RefreshToken>,
   ) {}
 
   async findById(id: number) {
-    return this.refreshTokenRepository.findOne(id);
+    return this.refreshTokensRepository.findOne(id);
   }
 
   async create(user: User, ttl: number): Promise<RefreshToken> {
@@ -26,6 +26,6 @@ export class RefreshTokensService {
 
     token.expires = expiration;
 
-    return this.refreshTokenRepository.save(token);
+    return this.refreshTokensRepository.save(token);
   }
 }

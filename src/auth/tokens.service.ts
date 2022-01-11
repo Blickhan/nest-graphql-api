@@ -20,7 +20,7 @@ export interface RefreshTokenPayload {
 @Injectable()
 export class TokensService {
   constructor(
-    private refreshTokenService: RefreshTokensService,
+    private refreshTokensService: RefreshTokensService,
     private jwtService: JwtService,
     private usersService: UsersService,
   ) {}
@@ -35,7 +35,10 @@ export class TokensService {
   }
 
   async generateRefreshToken(user: User, expiresIn: number): Promise<string> {
-    const refreshToken = await this.refreshTokenService.create(user, expiresIn);
+    const refreshToken = await this.refreshTokensService.create(
+      user,
+      expiresIn,
+    );
 
     const opts: SignOptions = {
       ...BASE_OPTIONS,
@@ -118,6 +121,6 @@ export class TokensService {
       throw new Error('Refresh token malformed');
     }
 
-    return this.refreshTokenService.findById(tokenId);
+    return this.refreshTokensService.findById(tokenId);
   }
 }
